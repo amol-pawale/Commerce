@@ -1,0 +1,1 @@
+namespace Commerce.Domain.Entities;
