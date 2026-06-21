@@ -1,0 +1,96 @@
+name: PR Pipeline
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  lint-and-format:
+    name: 1. Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          
+      - name: Verify .NET Format
+        working-directory: ./Backend
+        run: dotnet format --verify-no-changes
+
+  build:
+    name: 2. Build
+    runs-on: ubuntu-latest
+    needs: lint-and-format
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          
+      - name: Build .NET
+        working-directory: ./Backend
+        run: dotnet build --configuration Release
+
+  test:
+    name: 3. Automated Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          
+      - name: Test .NET
+        working-directory: ./Backend
+        run: dotnet test --configuration Release
+
+  ai-review:
+    name: 4. AI Code Review
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+
+      - name: Execute Gemini AI Review
+        uses: sshnaidm/gemini-code-review-action@v2
+        with:
+          gemini-key: ${{ secrets.GEMINIAI }}
+          model: gemini-2.5-flash
+          prompt: |
+            Act as a Senior Backend Engineer and Architect specializing in .NET Core (C#). 
+            Review the provided code diff thoroughly. Do not comment on trivial style or formatting issues (like indentation or missing semicolons). 
+            Instead, focus heavily on the following critical areas:
+
+            1. BACKEND (.NET):
+               - Proper async/await usage (avoiding .Result, .Wait(), or missing await keywords).
+               - Efficient Entity Framework (EF) Core queries (look for N+1 query problems, missing AsNoTracking for read-only queries, or missing indexes).
+               - Clean dependency injection patterns and proper object lifetimes (Transient vs Scoped vs Singleton).
+               - Robust exception handling and structured logging patterns.
+
+            2. SECURITY & PERFORMANCE:
+               - SQL injection risks, cross-site scripting (XSS), or unprotected API endpoints.
+               - Memory leaks, unmanaged resource disposal (using/IDisposable), or unoptimized loops.
+
+            3. TONE OF FEEDBACK:
+               - Keep your comments professional, highly constructive, and concise.
+               - State exactly what the issue is, why it matters, and provide a short code example of the recommended fix where applicable.
+               - IF THE CODE IS WELL-WRITTEN AND LOOKS GOOD: Do not leave empty or negative reviews. Instead, explicitly post a single supportive comment stating exactly: "LGTM! The code follows best practices and no issues were found."
