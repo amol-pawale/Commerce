@@ -2,10 +2,8 @@ name: Gemini AI Code Review
 
 on:
   pull_request:
-    # Triggers when a PR is created, updated with new commits, or reopened
     types: [opened, synchronize, reopened]
 
-# Grants the action permission to read the code and write comments on the PR
 permissions:
   contents: read
   pull-requests: write
@@ -19,20 +17,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # Important: Fetches enough history to accurately compare the PR against the base branch
           fetch-depth: 0 
 
       - name: Execute Gemini AI Review
-        # Note: You can swap this for any Gemini Code Review action from the GitHub Marketplace
-        uses: strawgate/gemini-for-github@v0.3 
-        env:
-          # Your API key from Google AI Studio (Stored in GitHub Secrets)
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # Automatically provided by GitHub to allow the action to post comments
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        uses: sshnaidm/gemini-code-review-action@v2
+        with:
+          # Updated to match your exact secret name: GEMINIAI
+          gemini-key: ${{ secrets.GEMINIAI }}
           
-          # Your custom .NET and React Architect instructions
-          SYSTEM_PROMPT: >
+          prompt: |
             Act as a Senior Full-Stack Engineer and Architect specializing in .NET Core (C#) and modern React (TypeScript). 
             Review the provided code diff thoroughly. Do not comment on trivial style or formatting issues (like indentation or missing semicolons). 
             Instead, focus heavily on the following critical areas:
