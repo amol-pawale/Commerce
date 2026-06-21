@@ -22,8 +22,9 @@ jobs:
       - name: Execute Gemini AI Review
         uses: sshnaidm/gemini-code-review-action@v2
         with:
-          # Updated to match your exact secret name: GEMINIAI
           gemini-key: ${{ secrets.GEMINIAI }}
+          # Switched to the high-speed, high-limit Flash model
+          model: gemini-2.5-flash
           
           prompt: |
             Act as a Senior Full-Stack Engineer and Architect specializing in .NET Core (C#) and modern React (TypeScript). 
