@@ -16,15 +16,19 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-          
+
+      - name: Restore Dependencies
+        working-directory: ./Backend
+        run: dotnet restore Commerce.sln
+
       - name: Verify .NET Format
         working-directory: ./Backend
-        run: dotnet format --verify-no-changes
+        run: dotnet format Commerce.sln --verify-no-changes
 
   build:
     name: 2. Build
@@ -38,10 +42,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-          
-      - name: Build .NET
+
+      - name: Restore Dependencies
         working-directory: ./Backend
-        run: dotnet build --configuration Release
+        run: dotnet restore Commerce.sln
+
+      - name: Build Solution
+        working-directory: ./Backend
+        run: dotnet build Commerce.sln --configuration Release --no-restore
 
   test:
     name: 3. Automated Tests
@@ -55,42 +63,69 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-          
-      - name: Test .NET
+
+      - name: Restore Dependencies
         working-directory: ./Backend
-        run: dotnet test --configuration Release
+        run: dotnet restore Commerce.sln
+
+      - name: Run Tests
+        # No test projects exist yet — this step is a no-op until tests are added.
+        # dotnet test will succeed with 0 tests found.
+        working-directory: ./Backend
+        run: dotnet test Commerce.sln --configuration Release --no-restore --verbosity normal
 
   ai-review:
     name: 4. AI Code Review
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 1
 
-      - name: Execute Gemini AI Review
-        uses: sshnaidm/gemini-code-review-action@v2
+      - name: Execute Claude Code Review
+        uses: anthropics/claude-code-action@v1
         with:
-          gemini-key: ${{ secrets.GEMINIAI }}
-          model: gemini-2.5-flash
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
           prompt: |
-            Act as a Senior Backend Engineer and Architect specializing in .NET Core (C#). 
-            Review the provided code diff thoroughly. Do not comment on trivial style or formatting issues (like indentation or missing semicolons). 
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Note: The PR branch is already checked out in the current working directory.
+            Use `gh pr comment` for top-level feedback.
+            Use `mcp__github_inline_comment__create_inline_comment` (with `confirmed: true`) to highlight specific code issues.
+            Only post GitHub comments — don't submit review text as plain messages.
+
+            Act as a Senior Backend Engineer and Architect specializing in .NET Core (C#) and clean layered architectures.
+            Review the provided code diff thoroughly. Do not comment on trivial style or formatting issues (like indentation or missing semicolons).
             Instead, focus heavily on the following critical areas:
 
             1. BACKEND (.NET):
                - Proper async/await usage (avoiding .Result, .Wait(), or missing await keywords).
-               - Efficient Entity Framework (EF) Core queries (look for N+1 query problems, missing AsNoTracking for read-only queries, or missing indexes).
-               - Clean dependency injection patterns and proper object lifetimes (Transient vs Scoped vs Singleton).
-               - Robust exception handling and structured logging patterns.
+               - Efficient Entity Framework (EF) Core queries — look for N+1 query problems, missing AsNoTracking for read-only queries, or missing indexes.
+               - Clean dependency injection patterns and correct object lifetimes (Transient vs Scoped vs Singleton).
+               - Robust exception handling, retry logic, and structured logging patterns.
+               - Configuration binding from appsettings.json using the Options pattern.
 
-            2. SECURITY & PERFORMANCE:
-               - SQL injection risks, cross-site scripting (XSS), or unprotected API endpoints.
+            2. ARCHITECTURE & DESIGN:
+               - Correct separation of concerns across Api, Application, Domain, and Infrastructure layers.
+               - Domain model integrity — business logic should not leak into controllers or infrastructure.
+               - Use of appropriate design patterns (repository, mediator, etc.) and avoiding anemic domain models.
+
+            3. SECURITY & PERFORMANCE:
+               - SQL injection risks, XSS, or unprotected API endpoints missing authorization.
+               - Hardcoded credentials or secrets in code/config files.
                - Memory leaks, unmanaged resource disposal (using/IDisposable), or unoptimized loops.
+               - Missing input validation on API request models.
 
-            3. TONE OF FEEDBACK:
-               - Keep your comments professional, highly constructive, and concise.
-               - State exactly what the issue is, why it matters, and provide a short code example of the recommended fix where applicable.
-               - IF THE CODE IS WELL-WRITTEN AND LOOKS GOOD: Do not leave empty or negative reviews. Instead, explicitly post a single supportive comment stating exactly: "LGTM! The code follows best practices and no issues were found."
+            4. TONE OF FEEDBACK:
+               - ONLY leave a review comment if you find a genuine issue worth raising.
+               - For each real issue: state exactly what the problem is, why it matters, and provide a short code example of the recommended fix.
+               - IF NO ISSUES ARE FOUND: post exactly one comment saying "LGTM! The code follows best practices and no issues were found." — nothing more.
