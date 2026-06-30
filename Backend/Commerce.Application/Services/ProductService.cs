@@ -2,15 +2,16 @@ using Commerce.Application.DTOs.Responses;
 using Commerce.Application.Interfaces;
 
 namespace Commerce.Application.Services;
-using System.Linq; 
+
+using System.Linq;
 
 public class ProductService
 {
-    private readonly IProductRepository _repository; 
+    private readonly IProductRepository _repository;
 
     public ProductService(IProductRepository repository)
     {
-        _repository  = repository ;
+        _repository = repository;
     }
     public async Task<List<ProductResponse>> GetAllAsync()
     {
@@ -30,6 +31,6 @@ public class ProductService
         }).ToList();
 
 
-    }       
+    }
 
 }
