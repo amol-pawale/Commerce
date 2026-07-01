@@ -25,8 +25,8 @@ public class ProductService
             Name = product.Name,
             SKU = product.SKU,
             Price = product.Price.Amount,
-            Currency = product.Price.Currency
-            StockQuantity = product
+            Currency = product.Price.Currency,
+            StockQuantity = product.StockQuantity
 
         }).ToList();
 
