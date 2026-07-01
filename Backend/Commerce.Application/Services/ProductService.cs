@@ -16,9 +16,6 @@ public class ProductService
     public async Task<List<ProductResponse>> GetAllAsync()
     {
         var products = await _repository.GetAllAsync();
-        List<ProductResponse> productResponses = new();
-        ProductResponse productResponse = new();
-
         return products.Select(product => new ProductResponse
         {
             Id = product.Id,
@@ -29,7 +26,6 @@ public class ProductService
             StockQuantity = product.StockQuantity
 
         }).ToList();
-
 
     }
 
