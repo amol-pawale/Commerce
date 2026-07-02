@@ -17,4 +17,6 @@ public class CreateProductRequest
 
     [Range(0, int.MaxValue)]
     public int StockQuantity { get; set; }
+
+    public required Guid CategoryId { get; set; }
 }
