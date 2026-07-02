@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Commerce.Application.Validation;
 namespace Commerce.Application.DTOs.Requests;
 
 public class CreateProductRequest
@@ -18,5 +19,6 @@ public class CreateProductRequest
     [Range(0, int.MaxValue)]
     public int StockQuantity { get; set; }
 
+    [NotEmptyGuid]
     public required Guid CategoryId { get; set; }
 }
