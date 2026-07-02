@@ -6,7 +6,7 @@ namespace Commerce.Application.Services;
 
 using System.Linq;
 
-public class ProductService
+public class ProductService : IProductService
 {
     private readonly IProductRepository _repository;
 
